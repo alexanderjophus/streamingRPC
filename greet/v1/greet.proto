@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package greet.v1;
+
+option go_package = "example/gen/greet/v1;greetv1";
+
+message GreetRequest {
+  string name = 1;
+}
+
+message GreetResponse {
+  string greeting = 1;
+}
+
+message GreetStreamRequest {
+}
+
+message GreetStreamResponse {
+  string people = 1;
+}
+
+service GreetService {
+  rpc Greet(GreetRequest) returns (GreetResponse) {}
+  // add streaming rpc
+  rpc GreetStream(GreetStreamRequest) returns (stream GreetStreamResponse) {}
+}
