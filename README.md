@@ -28,6 +28,15 @@ call Greet
 
 and enter a user name.
 
+### Frontend
+
+```bash
+cd web
+npm run dev
+```
+
+Magic.
+
 ## Hacking
 
 This is written using connect.build
@@ -36,4 +45,5 @@ This is written using connect.build
 buf generate
 ```
 
-(I'm still working on fixing the import path)
+- I'm still working on fixing the import path for the go side, it shouldn't be relative
+- Web seems to be lagging behind, I'm not sure why. Essentially when second message is sent, first is received.
