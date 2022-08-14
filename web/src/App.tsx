@@ -1,29 +1,38 @@
 import {
   createConnectTransport,
   createPromiseClient,
-  ConnectError,
 } from "@bufbuild/connect-web";
-
+import React, { useState } from 'react';
+import { People } from './components/people';
 
 // Import service definition that you want to connect to.
 import { GreetService } from "../gen/greet/v1/greet_connectweb";
 
-// The transport defines what type of endpoint we're hitting.
-// In our example we'll be communicating with a Connect endpoint.
-const transport = createConnectTransport({
-  baseUrl: "http://localhost:8080",
-});
-
-// Here we make the client itself, combining the service
-// definition with the transport.
-const client = createPromiseClient(GreetService, transport);
-
-for await (const res of client.greetStream({})) {
-  console.log(res);
-}
-
+// holy crap I'm bad at front end
 function App() {
-  return <>Hello world</>;
+  const [names, setNames] = useState<string[]>([]);
+  
+  const getNames = async () => {
+    const transport = createConnectTransport({
+      baseUrl: "http://localhost:8080",
+    });
+
+    const client = createPromiseClient(GreetService, transport);
+    for await (const res of client.greetStream({})) {
+      setNames(names.concat(names,res.people));
+    }
+  };
+
+  getNames();
+
+  let nameList: JSX.Element[]=[];
+  names.forEach((item,index)=>{
+    nameList.push( <People key={index} name={item} />);
+  })
+
+  return <>
+    {nameList}
+  </>;
 }
 
 export default App
