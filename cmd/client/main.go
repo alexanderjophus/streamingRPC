@@ -5,10 +5,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/bufbuild/connect-go"
 	greetv1 "github.com/trelore/streamingRPC/gen/greet/v1"
 	"github.com/trelore/streamingRPC/gen/greet/v1/greetv1connect"
-
-	"github.com/bufbuild/connect-go"
 )
 
 func main() {
