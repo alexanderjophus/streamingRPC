@@ -28,8 +28,8 @@ const (
 // GreetServiceClient is a client for the greet.v1.GreetService service.
 type GreetServiceClient interface {
 	Greet(context.Context, *connect_go.Request[v1.GreetRequest]) (*connect_go.Response[v1.GreetResponse], error)
-	// add streaming rpc
 	GreetStream(context.Context, *connect_go.Request[v1.GreetStreamRequest]) (*connect_go.ServerStreamForClient[v1.GreetStreamResponse], error)
+	ExtractEntities(context.Context) *connect_go.BidiStreamForClient[v1.ExtractEntitiesRequest, v1.ExtractEntitiesResponse]
 }
 
 // NewGreetServiceClient constructs a client for the greet.v1.GreetService service. By default, it
@@ -52,13 +52,19 @@ func NewGreetServiceClient(httpClient connect_go.HTTPClient, baseURL string, opt
 			baseURL+"/greet.v1.GreetService/GreetStream",
 			opts...,
 		),
+		extractEntities: connect_go.NewClient[v1.ExtractEntitiesRequest, v1.ExtractEntitiesResponse](
+			httpClient,
+			baseURL+"/greet.v1.GreetService/ExtractEntities",
+			opts...,
+		),
 	}
 }
 
 // greetServiceClient implements GreetServiceClient.
 type greetServiceClient struct {
-	greet       *connect_go.Client[v1.GreetRequest, v1.GreetResponse]
-	greetStream *connect_go.Client[v1.GreetStreamRequest, v1.GreetStreamResponse]
+	greet           *connect_go.Client[v1.GreetRequest, v1.GreetResponse]
+	greetStream     *connect_go.Client[v1.GreetStreamRequest, v1.GreetStreamResponse]
+	extractEntities *connect_go.Client[v1.ExtractEntitiesRequest, v1.ExtractEntitiesResponse]
 }
 
 // Greet calls greet.v1.GreetService.Greet.
@@ -71,11 +77,16 @@ func (c *greetServiceClient) GreetStream(ctx context.Context, req *connect_go.Re
 	return c.greetStream.CallServerStream(ctx, req)
 }
 
+// ExtractEntities calls greet.v1.GreetService.ExtractEntities.
+func (c *greetServiceClient) ExtractEntities(ctx context.Context) *connect_go.BidiStreamForClient[v1.ExtractEntitiesRequest, v1.ExtractEntitiesResponse] {
+	return c.extractEntities.CallBidiStream(ctx)
+}
+
 // GreetServiceHandler is an implementation of the greet.v1.GreetService service.
 type GreetServiceHandler interface {
 	Greet(context.Context, *connect_go.Request[v1.GreetRequest]) (*connect_go.Response[v1.GreetResponse], error)
-	// add streaming rpc
 	GreetStream(context.Context, *connect_go.Request[v1.GreetStreamRequest], *connect_go.ServerStream[v1.GreetStreamResponse]) error
+	ExtractEntities(context.Context, *connect_go.BidiStream[v1.ExtractEntitiesRequest, v1.ExtractEntitiesResponse]) error
 }
 
 // NewGreetServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -95,6 +106,11 @@ func NewGreetServiceHandler(svc GreetServiceHandler, opts ...connect_go.HandlerO
 		svc.GreetStream,
 		opts...,
 	))
+	mux.Handle("/greet.v1.GreetService/ExtractEntities", connect_go.NewBidiStreamHandler(
+		"/greet.v1.GreetService/ExtractEntities",
+		svc.ExtractEntities,
+		opts...,
+	))
 	return "/greet.v1.GreetService/", mux
 }
 
@@ -107,4 +123,8 @@ func (UnimplementedGreetServiceHandler) Greet(context.Context, *connect_go.Reque
 
 func (UnimplementedGreetServiceHandler) GreetStream(context.Context, *connect_go.Request[v1.GreetStreamRequest], *connect_go.ServerStream[v1.GreetStreamResponse]) error {
 	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("greet.v1.GreetService.GreetStream is not implemented"))
+}
+
+func (UnimplementedGreetServiceHandler) ExtractEntities(context.Context, *connect_go.BidiStream[v1.ExtractEntitiesRequest, v1.ExtractEntitiesResponse]) error {
+	return connect_go.NewError(connect_go.CodeUnimplemented, errors.New("greet.v1.GreetService.ExtractEntities is not implemented"))
 }

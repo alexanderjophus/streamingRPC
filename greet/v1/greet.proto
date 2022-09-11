@@ -6,8 +6,8 @@ option go_package = "github.com/trelore/streamingRPC/gen/greet/v1;greetv1";
 
 service GreetService {
   rpc Greet(GreetRequest) returns (GreetResponse) {}
-  // add streaming rpc
   rpc GreetStream(GreetStreamRequest) returns (stream GreetStreamResponse) {}
+  rpc ExtractEntities(stream ExtractEntitiesRequest) returns (stream ExtractEntitiesResponse) {}
 }
 
 message GreetRequest {
@@ -23,4 +23,16 @@ message GreetStreamRequest {
 
 message GreetStreamResponse {
   string people = 1;
+}
+
+message ExtractEntitiesRequest {
+  string message = 1;
+}
+
+message ExtractEntitiesResponse {
+  message Result {
+    string text = 1;
+    string label = 2;
+  }
+  repeated Result results = 1;
 }
