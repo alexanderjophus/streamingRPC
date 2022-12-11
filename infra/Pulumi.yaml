@@ -1,0 +1,3 @@
+name: streamingRPC
+runtime: go
+description: An example of how to do streaming rpcs in go
