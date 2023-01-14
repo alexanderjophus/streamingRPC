@@ -7,8 +7,8 @@ package greetv1connect
 import (
 	context "context"
 	errors "errors"
+	v1 "github.com/alexanderjophus/streamingRPC/gen/greet/v1"
 	connect_go "github.com/bufbuild/connect-go"
-	v1 "github.com/trelore/streamingRPC/gen/greet/v1"
 	http "net/http"
 	strings "strings"
 )
