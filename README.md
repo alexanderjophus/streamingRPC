@@ -50,7 +50,3 @@ This is written using connect.build
 ```bash
 buf generate
 ```
-
-- I'm still working on fixing the import path for the go side, it shouldn't be relative
-- Web seems to be lagging behind, I'm not sure why. Essentially when second message is sent, first is received.
-  - https://github.com/bufbuild/connect-web/issues/233

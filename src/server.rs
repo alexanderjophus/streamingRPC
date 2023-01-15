@@ -1,10 +1,16 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::pin::Pin;
+use tokio::task::spawn_blocking;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio::sync::{mpsc, RwLock};
+use tokio_stream::Stream;
 use tokio_stream::wrappers::ReceiverStream;
 use uuid::Uuid;
+use tokenizers::tokenizer::{Tokenizer};
+use async_stream::stream;
 
+use greetv1::extract_entities_response;
 use greetv1::greet_service_server::{GreetService, GreetServiceServer};
 use greetv1::{GreetResponse, GreetRequest, GreetStreamResponse, GreetStreamRequest, ExtractEntitiesRequest, ExtractEntitiesResponse};
 
@@ -22,10 +28,6 @@ struct Shared {
 
 impl Shared {
     async fn broadcast(&self, msg: GreetStreamResponse) {
-        // To make our logic simple and consistency, we will broadcast to all
-        // users which include msg sender.
-        // On frontend, sender will send msg and receive its broadcasted msg
-        // and then show his msg on frontend page.
         for (name, tx) in &self.senders {
             match tx.send(msg.clone()).await {
                 Ok(_) => {}
@@ -37,10 +39,19 @@ impl Shared {
     }
 }
 
-
-#[derive(Default)]
 pub struct MyGreeter {
     shared: Arc<RwLock<Shared>>,
+    tokenizer: Tokenizer,
+}
+
+impl MyGreeter {
+    fn new (tokenizer: Tokenizer) -> Self {
+        let tokenizer = tokenizer;
+        Self {
+            shared: Arc::new(RwLock::new(Shared::default())),
+            tokenizer: tokenizer,
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -97,34 +108,52 @@ impl GreetService for MyGreeter {
         Ok(Response::new(
             tokio_stream::wrappers::ReceiverStream::new(stream_rx),
         ))
-
-        // let (tx, rx) = mpsc::channel(4);
-        // let greets = self.greets.clone();
-    
-        // tokio::spawn(async move {
-        //     for greet in &greets[..] {
-        //         println!("Sending greet: {:?}", greet);
-        //         tx.send(Ok(greet.clone())).await.unwrap();
-        //     }
-        // });
-    
-        // Ok(Response::new(ReceiverStream::new(rx)))
     }
 
-    type ExtractEntitiesStream = ReceiverStream<Result<ExtractEntitiesResponse, Status>>;
+    // type ExtractEntitiesStream = Pin<Box<dyn Stream<Item = Result<ExtractEntitiesResponse, Status>> + Send + Sync + 'static>>;
+    type ExtractEntitiesStream = Pin<Box<dyn Stream<Item = Result<ExtractEntitiesResponse, Status>> + Send + 'static>>;
 
     async fn extract_entities(
         &self,
-        _: Request<tonic::Streaming<ExtractEntitiesRequest>>,
+        request: Request<tonic::Streaming<ExtractEntitiesRequest>>,
     ) -> Result<Response<Self::ExtractEntitiesStream>, Status> {
-        Err(Status::unimplemented("Not implemented yet"))
+        println!("Got a request from {:?}", request.remote_addr());
+
+        let mut stream = request.into_inner();
+
+        let shared_tokenizer = self.tokenizer.clone();
+        
+        let output = stream! {
+            loop {
+                let msg = stream.message().await;
+                let msg = match msg {
+                    Ok(msg) => msg.unwrap().message,
+                    Err(_) => break,
+                };
+
+                let enc = shared_tokenizer.encode(msg, false).unwrap();
+                println!("{:?}", enc.get_tokens());
+
+                yield Ok(ExtractEntitiesResponse {
+                    results: vec!{
+                        extract_entities_response::Result {
+                            text: "hello".to_string(),
+                            label: "world".to_string(),
+                        }
+                    },
+                });
+            }
+        };
+
+        Ok(Response::new(Box::pin(output) as Self::ExtractEntitiesStream))
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50052".parse().unwrap();
-    let greeter = MyGreeter::default();
+    let tokenizer = spawn_blocking(move || Tokenizer::from_pretrained("bert-base-cased", None).unwrap()).await.unwrap();
+    let greeter = MyGreeter::new(tokenizer);
 
     println!("GreeterServer listening on {}", addr);
 
